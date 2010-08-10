@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Template Test</title>
+  	<script type="text/javascript" src="/scripts/jquery-1.4.2.min.js" ></script>
+  	<script type="text/javascript" src="/mediaplayer-html5/jquery.jwplayer.js"></script>
+  	
+  	<!--
+  	jquery-tmpl
+  	http://github.com/nje/jquery-tmpl JQuery JavaScript engine
+  	to generate the playlist and video tag from data source 
+  	-->
+	<script src="/scripts/jquery.tmpl.js" type="text/javascript"></script>
+
+  <script type="text/javascript">
+	var catNumber;
+	var videos = [
+		{
+			categoryLabel: "Cooking Techniques",
+			sessions: [
+	        			{
+	        				"server":"stream.server.com/video",
+		        			"name": "Session 1, Part 1",
+		        			"file":"pathto/SomeVideo",			// no file extensions allows
+		        			"poster": "pathto/thePoster",		// for greater flexibility when building out the template
+		        			"description":"The best jello mold technique you'll find on the web"
+		        		},
+	        			{
+		        			"server":"stream.server2.com/video",
+		        			"name": "Session 1, Part 2",
+		        			"file":"pathto/theVideo2",
+		        			"poster": "pathto/thePoster2",
+		        			"description":null
+		        		},
+	        			{
+		        			"server":"stream.server.com/video",
+		        			"name": "Session 1, Part 3",
+		        			"file":"pathto/SomeVideo3",
+		        			"poster": "pathto/ThePoster3",
+		        			"description":null
+		        		}
+	        ]
+		},
+		{
+			categoryLabel: "Food Preparation",
+			sessions: [
+	        			{
+	        				"server":"stream.server.com/video",
+		        			"name": "Julienne Carrots",
+		        			"file":"pathTo/theVideo4",
+		        			"poster": "pathto/TheCarrotVideoPoster",
+		        			"description":null
+		        		}
+	        ]
+		}
+	];
+
+// Template functions
+// see jquery-tmpl demos
+// http://github.com/nje/jquery-tmpl/tree/master/demos/samplesCore/
+function getCategory() {
+	return this.data.categoryLabel;
+}
+
+function alternate( item, array ) {
+	return ($.inArray( item, array ) % 2) ? "videoAlt" : "video";
+}
+
+function videoNumber() {
+	return $.inArray( this.data, this.parent.data.sessions );
+}
+
+function categoryNumber() {
+	catNumber = $.inArray( this.data, videos );
+	return $.inArray( this.data, videos );
+}
+
+function getTemplate( key ) {
+	return $( "#tmpl" + key ).templates();
+}
+
+function setPlayer( videosIndex,sessionsIndex, autostart ){
+	$( "#videoPlayer" ).empty();
+	$( "#tmplPlayer" )
+		.tmpl( videos[videosIndex].sessions[sessionsIndex] )
+		.appendTo( "#videoPlayer" );
+		showVideo( videos, videosIndex, sessionsIndex, autostart );
+}
+
+function showVideo( data, category, video, autostart ) {
+		var theServer = data[category].sessions[video].server;
+		var theVideo = data[category].sessions[video].file;
+		
+	    $( '#myplayer' ).jwplayer({
+		    flashplayer:'/mediaplayer-html5/player.swf',
+		    skin:'/mediaplayer-html5/stormtrooper/stormtrooper.xml',
+		    autostart:autostart,
+		    smoothing:true,
+		    file:'streamer=rtmp://' + theServer + '&file='+ theVideo + '.mp4&type=rtmp'
+		});
+}
+var theVid;
+
+// Behavior and interaction
+function showNext( data, category, video ) {
+		var theServer = data[category].sessions[video].server;
+		var theVideo = data[category].sessions[video].file;
+		
+		// RTMP flash fallback. Unable to use load90 for the FLASHVAR streamer
+		// so instead I just reload the videoPlayer div with a new JW media player  
+	    if (( $( 'param' ).length > 0) || ( $( 'embed[flashvars *= rtmp ]' ).length > 0)){
+	    	//$.jwplayer().load('streamer=rtmp://' + theServer + '&file='+ theVideo + '.mp4&type=rtmp');
+	    	setPlayer( category, video, true );
+	    }else{
+	    	theVid = "http://"+ theServer + "/" + theVideo + ".mp4";
+	    	playThis(theVid);
+	    }
+	    
+}
+
+function playThis(vid){
+	// stop()ping the current video, load()ing the next and then play()ing it would be best
+	// but there is a bug in HTML5 mediaplayer v1 that doesn't toggle the next poster div
+	// to display:none when play() is invoked. This causes the video to be hidden behind the
+	// poster div. To get around this we simply load the next video
+	// which will buffer and play the next video automatically
+	
+	$.jwplayer().load(vid);
+}
+
+// JQuery init on document load
+$(function(){
+	setPlayer(0, 0, false);
+	$( "#tmplCategory" )
+		.tmpl( videos )
+		.appendTo( "#videoPlaylist" )
+			.find( 'a' )
+			.click(function(){
+				// Gather the id attribute from the clicked element
+				// and split it's value to retrieve category
+				// and video index numbers.
+				var vidIndex = $(this).attr('id');
+				var splitIDs = vidIndex.split("-");
+				var catNum = splitIDs[1];
+				var vidNum = splitIDs[2];
+				
+				// Pass the data object,
+				// and the selected video
+				// set autoplay to true
+				// and call the showNext function
+				showNext(videos,catNum,vidNum, true);
+				return false;
+			});
+});	
+</script>
+
+<!-- Video Player template -->
+<script id="tmplPlayer" type="text/html">
+	<video id="myplayer" width="480" height="270" poster="http://${server}/${poster}.jpg" autoplay>
+		<source src="http://${server}/${file}.mp4" type="video/mp4" />
+	</video>
+</script>
+
+<!-- Category sections template -->
+<script id="tmplCategory" type="text/html">
+	<div id="catIndex-${categoryNumber}">
+		<hr>
+		<h2 class="${alternate(this.data, videos)}">${getCategory}</h2>
+		{{if sessions}}
+			{{tmpl(sessions) getTemplate("Playlist")}}
+		{{/if}}
+	</div>
+</script>
+
+<!-- Video Playlist template -->
+<script id="tmplPlaylist" type="text/html">
+<ul class="catIndex-${categoryNumber}">
+	<li class="${alternate(this.parent.data, videos)}">
+		<p><strong>Video: </strong><a id="index-${catNumber}-${videoNumber}" href="http://${server}/${file}">${name}</a></p>
+	</li>
+	<li>
+		${description}
+	</li>
+</ul>
+</script>
+
+<body>
+	<div id="videoPlayer"></div> 
+	<div id="videoPlaylist"></div> 
+</body>
+</html>
