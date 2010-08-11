@@ -36,9 +36,10 @@ var showVideo = function(json, videosIndex, sessionsIndex, autostart){
 		var theVideo = json[videosIndex].sessions[sessionsIndex].file;
 		$('#myplayer').jwplayer({
 		    flashplayer:'/mediaplayer-html5/player.swf',
-		    skin:'/mediaplayer-html5/stormtrooper/stormtrooper.xml',
-		    autostart:autostart,
-		    file:'streamer=rtmp://' + theServer + '&file='+ theVideo + '.mp4&type=rtmp'
+		    skin:'/mediaplayer-html5/five/five.xml',
+		    autostart:autostart
+                //  Enable line below for RTMP streaming
+		//  file:'streamer=rtmp://' + theServer + '&file='+ theVideo + '.mp4&type=rtmp'
 		});
 }
 
